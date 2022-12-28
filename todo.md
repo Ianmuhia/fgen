@@ -1,0 +1,23 @@
+add generators for :
+    - handlers
+    - handlers with test
+    - services 
+    - services with
+    - services with cache
+    - dependecy injection
+    - respose mappers and headers
+    - migration files
+    - docker files for build
+    - readme file
+    - docker-ignore
+    - .gitignore
+    - contirbutors.txt
+    - LICENSE
+    - workflows folers
+        - ci.yml
+        - dependabot.yml
+    - compose file for the project
+        - local
+        - production
+    - tasks
+    - golanci-lint file
