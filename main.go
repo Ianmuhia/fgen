@@ -1,75 +1,88 @@
 package main
 
 import (
-	"bytes"
 	"embed"
-	"errors"
-	"go/format"
-	"html/template"
-	"io/ioutil"
 	"log"
 	"os"
-	"time"
+	"path/filepath"
 )
 
 var (
-	//go:embed templates
+	//go:embed templates/*
 	templateFiles embed.FS
 
 	domain      string
 	domainTitle string
 	templates   = []string{
 		"air",
+		"contributors",
+		"dockerignore",
 		"gci",
 		"gi",
-		"service",
+		"license",
+		"makefile",
+		"readme",
 	}
 )
 
 func main() {
 
-	// v, err := os.ReadDir("templates")
-	// if err != nil {
-	// 	log.Fatal(err)
+	// args := map[string]string{
+	// 	"Domain":      domain,
+	// 	"DomainTitle": domainTitle,
+	// 	"Date":        time.Now().Format(time.RFC3339),
 	// }
-	// for _, j := range v {
-	// 	k := j.Name()
-	// 	log.Print(k)
-	// }
-	args := map[string]string{
-		"Domain":      domain,
-		"DomainTitle": domainTitle,
-		"Date":        time.Now().Format(time.RFC3339),
-	}
 	//TODO: replace with actual project name.
-	if err := os.Mkdir("project", 0755); err != nil {
-		if errors.Is(err, os.ErrExist) {
-			log.Print("exists")
-		}
+	if err := os.MkdirAll(filepath.Join("project"), os.ModePerm); err != nil {
 		log.Fatalf("failed to create %s directory %s", domain, err)
 	}
-
+	if err := os.Chdir("project"); err != nil {
+		log.Fatalf("could not switch dir , %v", err)
+	}
 	for _, tmplName := range templates {
-		log.Printf("Creating %s.go file\n", tmplName)
-		tmpl, err := template.ParseFS(templateFiles, "templates/"+tmplName+".tmpl")
+		switch tmplName {
+		case "air":
+			createDotFiles("air.tmpl", ".air.toml")
+		case "contributors":
+			createDotFiles("contributors.tmpl", "CONTRIBUTORS.txt")
+		case "dockerignore":
+			createDotFiles("dockerignore.tmpl", ".dockerignore")
+		case "gci":
+			createDotFiles("gci.tmpl", ".golangci.yml")
+		case "gi":
+			createDotFiles("gi.tmpl", ".gitignore")
+		case "license":
+			createDotFiles("license.tmpl", "LICENSE")
+		case "makefile":
+			createDotFiles("makefile.tmpl", "Makefile")
+		case "readme":
+			createDotFiles("readme.tmpl", "README")
+		default:
+			log.Print("no file to create")
+		}
+
+		log.Printf("Created %s file successfully\n", tmplName)
+	}
+}
+
+func createDotFiles(tmplName, actual string) {
+	log.Printf("Creating %s file\n", tmplName)
+
+	b, err := templateFiles.ReadFile("templates/" + tmplName)
+	if err != nil {
+		log.Fatalf("could not read template file , %v", err)
+	}
+	f, err := os.Create(filepath.Join(actual))
+	defer func(f *os.File) {
+		err := f.Close()
 		if err != nil {
-			log.Fatalf("failed to read template %s.go.tmpl: %s", tmplName, err)
+			log.Println(err)
 		}
-		buf := bytes.Buffer{}
-		if err := tmpl.Execute(&buf, args); err != nil {
-			log.Fatalf("failed to parse template %s: %s", tmplName, err)
-		}
-		fn := tmplName + ".go"
-		if tmplName == "domain" {
-			fn = domain + "s.go"
-		}
-		formatted, err := format.Source(buf.Bytes())
-		if err != nil {
-			log.Fatalf("go/format: %s", err)
-		}
-		if err := ioutil.WriteFile("../../"+domain+"s/"+fn, formatted, 0644); err != nil {
-			log.Fatalf("failed to write template %s: %s", tmplName, err)
-		}
-		log.Printf("Created %s.go file successfully\n", tmplName)
+	}(f)
+	if err != nil {
+		log.Fatalf("could not create file , %v", err)
+	}
+	if err := os.WriteFile(f.Name(), b, 0644); err != nil {
+		log.Fatalf("failed to write template %s: %s", actual, err)
 	}
 }
